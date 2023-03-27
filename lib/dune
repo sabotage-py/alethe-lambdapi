@@ -1,0 +1,9 @@
+(library
+ (name reconstruction)
+  (libraries base)
+  (preprocess (pps ppx_deriving.show)))
+
+(ocamllex lexer)
+
+(menhir
+ (modules parser))
