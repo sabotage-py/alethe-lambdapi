@@ -1,4 +1,5 @@
 (executable
  (public_name reconstruction)
  (name main)
- (libraries reconstruction cmdliner))
+ (preprocess (pps ppx_deriving.show ppx_deriving.ord))
+ (libraries reconstruction base cmdliner))

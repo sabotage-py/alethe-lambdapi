@@ -5,11 +5,11 @@
 (generate_opam_files true)
 
 (source
- (github NotBad4u/reconstruction))
+ (github sabotage-py/alethe-lambdapi))
 
-(authors "Coltellacci Alessio")
+(authors "Nabin Sahoo")
 
-(maintainers "Coltellacci Alessio")
+(maintainers "Nabin Sahoo")
 
 (license MIT)
 

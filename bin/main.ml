@@ -1,6 +1,7 @@
 open Cmdliner
 open Reconstruction.Parse
-open Reconstruction.Ast
+(* open Reconstruction.Ast *)
+open Reconstruction.Translate
 
 let veriT_proof_file =
   let info =
@@ -18,7 +19,7 @@ let reconstruction file =
   let content = read_whole_file file in 
     let script = parse content in
       match script with
-      | Ok s -> Format.printf "%a" pp_proofScript s
+      | Ok s -> print_string (get_lp_script s) (*Format.printf "%a" pp_proofScript s*)
       | Error e -> print_string e
 
 let cmd =
