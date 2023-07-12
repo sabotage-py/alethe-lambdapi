@@ -131,8 +131,8 @@ let rule_and_simplify x y =
       let (f1, f2, i1, i2) = if j1 < j2 then (x, z, j1, j2) else (z, x, j2, j1) in 
       let f1i = find_idx f1 xlist in
       let f2i = find_idx f2 xlist in 
-      let f1_header = List.fold_left (fun y _ -> l_app "∧e2c _ _" y) "h3" (List.init f1i (fun _ -> 0)) in 
-      let f2_header = List.fold_left (fun y _ -> l_app "∧e2c _ _" y) "h3" (List.init f2i (fun _ -> 0)) in
+      let f1_header = apply_n_times f1i "∧e2c _ _" "h3" in 
+      let f2_header = apply_n_times f2i "∧e2c _ _" "h3" in
       (* let len_xlist = List.length xlist in *)
       let have_f1 = l_have "f1" (l_prfc (term_translate f1)) 
         [if f1i = len_xlist - 1 then l_refine [f1_header] else l_refine [l_app "∧e1c _ _" f1_header]] in
@@ -162,7 +162,7 @@ let rule_and_simplify x y =
           ];
           l_have "h2" (l_prf ("(" ^ ltop ^ " ⇒c " ^ t ^ ")")) [
             l_assume ["pt"];
-            l_refine [List.fold_left (fun y _ -> l_app "∧ic _ _" y) "pt" (List.init (len_xlist - 1) (fun _ -> 0))]
+            l_refine [apply_n_times (len_xlist - 1) "∧ic _ _" "pt"]
           ];
           l_assume ["s1"; "left1"];
           l_apply ["left1"; "h1"; "h2"] 
