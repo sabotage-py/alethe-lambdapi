@@ -81,6 +81,8 @@ let l_proof_statement proof list = proof ^ " ≔ begin \n" ^
 let ltop = "Τ"
 let lbot = "⊥"
 let lnot = "¬"
+let limpliesc x y = "(" ^ x ^ " ⇒c " ^ y ^ ")"
+let leqc x y = "(" ^ x ^ " =c " ^ y ^ ")"
 
 let apply_n_times (n : int) (app_str : string) (init_str : string) : string = 
   List.fold_left (fun y _ -> l_app app_str y) init_str (List.init n (fun _ -> 0))
@@ -89,12 +91,49 @@ let rec not_counter = function
 | Not z -> let (p, fi) = not_counter z in (1 + p, fi) 
 | z -> (0, z)
 
+let and_repetition_remover (xlist : term list) (ylist : term list): string = 
+  let len_xlist = List.length xlist in
+  let len_ylist = List.length ylist in
+  let xt = term_translate (And xlist) in 
+  let yt = term_translate (And ylist) in
+  (* let rec get_first_repeater list = 
+    let rec aux x = function 
+    | y :: s -> if x = y then 
+      Some (List.flatten (List.mapi 
+      (fun i z -> if x = z then [i] else []) xlist )) 
+    else aux x s
+    | [] -> None in 
+    match list with 
+    | x :: s -> let repeated = match aux x s with 
+      | None -> get_first_repeater s
+      | Some auxlist -> auxlist in 
+      repeated
+    | [] -> [] in 
+  let _ = get_first_repeater ylist in *)
+  let rec get_indices (alist : term list) (blist : term list) : int list = 
+    match alist with 
+    | x :: t -> find_idx x blist :: (get_indices t blist)
+    | [] -> [] in 
+  let indices = get_indices ylist xlist in 
+  let extract_and_elim hyp_name p i = 
+    l_have ("a" ^ string_of_int p) (l_prfc (term_translate (List.nth ylist p))) [
+      let selector = apply_n_times i "∧e2c _ _" hyp_name in 
+      if i = len_xlist - 1 then l_refine [selector] else l_refine [l_app "∧e1c _ _" selector]] in
+  let extract_and_elim_subproof hyp_name = List.mapi (extract_and_elim hyp_name) indices in
+  let combine_formula = List.fold_right (fun p init -> l_app ("∧ic _ _ a" ^ string_of_int p) init) (List.init (len_ylist - 1) (fun x -> x)) ("a" ^ string_of_int (len_ylist - 1)) in
+  let combine_subproof = l_have "h1" (l_prf (limpliesc xt yt)) 
+    ([l_assume ["g0"]] @ (extract_and_elim_subproof "g0") @ [l_refine [combine_formula]]) in
+  l_proof_statement (l_prfc (leqc xt yt)) [
+    l_assume ["nh"]; l_refine ["nh _"]; combine_subproof; l_have "h2" (l_prf (limpliesc yt xt)) ["admit;"];  (*TODO -- replace "admit" with proof*)
+    l_assume ["s1"; "left1"]; l_apply ["left1"; "h1"; "h2"]
+  ]
+
 let rule_and_simplify x y = 
   match x with 
   | Ast.And xlist -> let len_xlist = List.length xlist in 
   let t = term_translate (And xlist) in
   let lpi_proof = match y with 
-    | Ast.And _ -> raise (UnderConstruction "why am I so lazy??")  (*TODO -- proof for removing duplicates*)
+    | Ast.And ylist -> and_repetition_remover xlist ylist (*incomplete -- need proof for other direction implication*)
     | Ast.Symbol "false" -> let rec get_contradicting_formulae = function 
       | [_] | [] -> raise (SemanticError "there is no contradiction in LHS for RHS to be 'false'")
       | x :: tl -> let rec aux2 (p, f) = function 
