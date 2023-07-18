@@ -58,6 +58,32 @@ exception UnderConstruction of string
 let rec find_idx el = function 
 | [] -> raise Not_found
 | x :: t -> if x = el then 0 else 1 + find_idx el t 
+
+let rec find_idx_opt el = function
+| [] -> None
+| x :: t -> if x = el then Some 0 else 
+  match find_idx_opt el t with
+  | None -> None
+  | Some i -> Some (1 + i)
+
+let unique_list list =
+  let rec aux keeper = function 
+  | [] -> keeper
+  | x :: t -> match find_idx_opt x keeper with 
+    | None -> aux (x :: keeper) t
+    | _ -> aux keeper t in 
+  List.rev (aux [] list)
+
+let elim_last list = 
+  let rec aux keeper = function 
+  | [] | [_] -> keeper
+  | x :: t -> aux (x :: keeper) t in 
+  List.rev (aux [] list)
+
+let rec rem_el el = function 
+| [] -> []
+| x :: t -> if x = el then t else (x :: (rem_el el t))
+
 (* let find_idx el list = List.find 
   (function | -1 -> false | _ -> true)
   (
@@ -78,7 +104,7 @@ let l_have (x : string) (proof : string) (list : string list) : string =
 let l_app x y = x ^ " (" ^ y ^ ")"
 let l_proof_statement proof list = proof ^ " ≔ begin \n" ^ 
   join_with " \n" list ^ " \nend;\n"
-let ltop = "Τ"
+let ltop = "⊤"
 let lbot = "⊥"
 let lnot = "¬"
 let limpliesc x y = "(" ^ x ^ " ⇒c " ^ y ^ ")"
@@ -96,35 +122,32 @@ let and_repetition_remover (xlist : term list) (ylist : term list): string =
   let len_ylist = List.length ylist in
   let xt = term_translate (And xlist) in 
   let yt = term_translate (And ylist) in
-  (* let rec get_first_repeater list = 
-    let rec aux x = function 
-    | y :: s -> if x = y then 
-      Some (List.flatten (List.mapi 
-      (fun i z -> if x = z then [i] else []) xlist )) 
-    else aux x s
-    | [] -> None in 
-    match list with 
-    | x :: s -> let repeated = match aux x s with 
-      | None -> get_first_repeater s
-      | Some auxlist -> auxlist in 
-      repeated
-    | [] -> [] in 
-  let _ = get_first_repeater ylist in *)
-  let rec get_indices (alist : term list) (blist : term list) : int list = 
+  let rec get_indices (alist : term list) (blist : term list) : int option list = 
     match alist with 
-    | x :: t -> find_idx x blist :: (get_indices t blist)
+    | x :: t -> find_idx_opt x blist :: (get_indices t blist)
     | [] -> [] in 
-  let indices = get_indices ylist xlist in 
+  let indices = List.map (function | None -> -1 | Some i -> i) (get_indices ylist xlist) in 
   let extract_and_elim hyp_name p i = 
     l_have ("a" ^ string_of_int p) (l_prfc (term_translate (List.nth ylist p))) [
       let selector = apply_n_times i "∧e2c _ _" hyp_name in 
       if i = len_xlist - 1 then l_refine [selector] else l_refine [l_app "∧e1c _ _" selector]] in
   let extract_and_elim_subproof hyp_name = List.mapi (extract_and_elim hyp_name) indices in
-  let combine_formula = List.fold_right (fun p init -> l_app ("∧ic _ _ a" ^ string_of_int p) init) (List.init (len_ylist - 1) (fun x -> x)) ("a" ^ string_of_int (len_ylist - 1)) in
+  let combine_formula = List.fold_right (fun p x -> l_app ("∧ic _ _ a" ^ string_of_int p) x) (List.init (len_ylist - 1) (fun x -> x)) ("a" ^ string_of_int (len_ylist - 1)) in
   let combine_subproof = l_have "h1" (l_prf (limpliesc xt yt)) 
     ([l_assume ["g0"]] @ (extract_and_elim_subproof "g0") @ [l_refine [combine_formula]]) in
+  let orig_indices2 = List.map (function | None -> len_ylist | Some i -> i) (get_indices xlist ylist) in 
+  let indices2 = rem_el len_ylist (unique_list (orig_indices2)) in 
+  let extract_and_elim2 hyp_name i = 
+    l_have ("a" ^ string_of_int i) (l_prfc (term_translate (List.nth ylist i))) [
+      let selector = apply_n_times i "∧e2c _ _" hyp_name in 
+      if i = len_ylist - 1 then l_refine [selector] else l_refine [l_app "∧e1c _ _" selector]] in 
+  let extract_and_elim_subproof2 hyp_name = List.map (extract_and_elim2 hyp_name) indices2 in
+  let combine_formula2 = List.fold_right (fun p x -> l_app ("∧ic _ _ a" ^ string_of_int p) x) (elim_last orig_indices2) ("a" ^ string_of_int (List.hd (List.rev orig_indices2))) in
+  let combine_subproof2 = l_have "h2" (l_prf (limpliesc yt xt)) ([l_assume ["k0"]] @ (extract_and_elim_subproof2 "k0") @ 
+    [l_have ("a" ^ string_of_int (len_ylist)) (l_prfc ltop) [l_refine ["intuition _"; "true"]];
+    l_refine [combine_formula2]]) in
   l_proof_statement (l_prfc (leqc xt yt)) [
-    l_assume ["nh"]; l_refine ["nh _"]; combine_subproof; l_have "h2" (l_prf (limpliesc yt xt)) ["admit;"];  (*TODO -- replace "admit" with proof*)
+    l_assume ["nh"]; l_refine ["nh _"]; combine_subproof; combine_subproof2;
     l_assume ["s1"; "left1"]; l_apply ["left1"; "h1"; "h2"]
   ]
 
@@ -133,7 +156,7 @@ let rule_and_simplify x y =
   | Ast.And xlist -> let len_xlist = List.length xlist in 
   let t = term_translate (And xlist) in
   let lpi_proof = match y with 
-    | Ast.And ylist -> and_repetition_remover xlist ylist (*incomplete -- need proof for other direction implication*)
+    | Ast.And ylist -> and_repetition_remover xlist ylist
     | Ast.Symbol "false" -> let rec get_contradicting_formulae = function 
       | [_] | [] -> raise (SemanticError "there is no contradiction in LHS for RHS to be 'false'")
       | x :: tl -> let rec aux2 (p, f) = function 
