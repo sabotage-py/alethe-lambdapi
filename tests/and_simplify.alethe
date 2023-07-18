@@ -1,0 +1,5 @@
+(step t2 (cl (= (and p1 p2 p3 true p2 p4 true p2) (and p1 p3 p4 p2))) :rule and_simplify)
+(step t3 (cl (= (and p1 p2 p3 p2 p4 p2) (and p1 p2 p3 p4))) :rule and_simplify)
+(step t4 (cl (= (and p1 (not p1)) false)) :rule and_simplify)
+(step t5 (cl (= (and p1 p2 false p3 p4) false)) :rule and_simplify)
+(step t6 (cl (= (and true true true true) true)) :rule and_simplify)
