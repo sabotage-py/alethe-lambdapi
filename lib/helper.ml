@@ -38,6 +38,12 @@ let rec rem_el el = function
 | [] -> []
 | x :: t -> if x = el then t else (x :: (rem_el el t))
 
+let rec get_indices (alist : 'a list) (blist : 'a list) : int option list = 
+  (*returns the list of indices in blist of the elements of alist*)
+  match alist with 
+  | x :: t -> find_idx_opt x blist :: (get_indices t blist)
+  | [] -> []
+
 (* let find_idx el list = List.find 
   (function | -1 -> false | _ -> true)
   (
