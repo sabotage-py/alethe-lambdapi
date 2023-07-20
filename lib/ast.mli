@@ -16,7 +16,9 @@ type term =
 | Not of term
 | And of terms
 | Or of terms
+| Xor of terms
 | Equal of term * term
+| Implies of term * term
 | Application of string * terms
 | Forall of sorts * term 
 | Exists of sorts * term

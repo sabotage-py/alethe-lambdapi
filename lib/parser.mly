@@ -8,7 +8,9 @@
 
 %token AND
 %token OR
+%token XOR
 %token EQUAL
+%token IMPLIES
 %token NOT
 %token FORALL
 %token EXISTS
@@ -44,6 +46,7 @@ proof:
 rule:
 | OR { "or" }
 | AND { "and" }
+| XOR { "xor" }
 | s=SYMBOL { s }
 
 /*
@@ -113,6 +116,8 @@ proof_term:
 | LPAREN NOT t=proof_term RPAREN  { Not(t) }
 | LPAREN AND ts=nonempty_list(proof_term) RPAREN  { And(ts) }
 | LPAREN OR ts=nonempty_list(proof_term) RPAREN  { Or(ts) }
+| LPAREN XOR ts=nonempty_list(proof_term) RPAREN  { Xor(ts) }
+| LPAREN IMPLIES l=proof_term r=proof_term RPAREN  { Implies(l,r) }
 | LPAREN EQUAL l=proof_term r=proof_term RPAREN  { Equal(l,r) }
 | LPAREN identifier=qual_identifier terms=nonempty_list(proof_term) RPAREN { Application(identifier, terms) }
 | identifier=qual_identifier { Symbol(identifier) }

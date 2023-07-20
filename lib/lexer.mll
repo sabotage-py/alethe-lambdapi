@@ -48,12 +48,16 @@ rule read_token = parse
     { AND }
 | "or"
     { OR }
+| "xor"
+    { XOR }
 | "not"
     { NOT }
 | "choice"
     { CHOICE }
 | ":="
     { ASSIGN }
+| "=>" 
+    { IMPLIES }
 | "="
     { EQUAL }
 | ":rule"
