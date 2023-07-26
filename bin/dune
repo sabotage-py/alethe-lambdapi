@@ -2,4 +2,4 @@
  (public_name reconstruction)
  (name main)
  (preprocess (pps ppx_deriving.show ppx_deriving.ord))
- (libraries reconstruction base cmdliner))
+ (libraries reconstruction base smtlib-utils))

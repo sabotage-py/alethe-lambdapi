@@ -1,6 +1,6 @@
 (library
  (name reconstruction)
-  (libraries base)
+  (libraries base smtlib-utils)
   (preprocess (pps ppx_deriving.show ppx_deriving.ord)))
 
 (ocamllex lexer)
