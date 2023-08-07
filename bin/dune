@@ -1,5 +1,6 @@
 (executable
  (public_name a2lp)
  (name main)
- (preprocess (pps ppx_deriving.show ppx_deriving.ord))
+ (preprocess
+  (pps ppx_deriving.show ppx_deriving.ord))
  (libraries a2lp base smtlib-utils))

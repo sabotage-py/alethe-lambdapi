@@ -1,7 +1,8 @@
 (library
  (name a2lp)
-  (libraries base smtlib-utils)
-  (preprocess (pps ppx_deriving.show ppx_deriving.ord)))
+ (libraries base smtlib-utils)
+ (preprocess
+  (pps ppx_deriving.show ppx_deriving.ord)))
 
 (ocamllex lexer)
 
