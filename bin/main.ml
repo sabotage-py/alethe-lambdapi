@@ -1,7 +1,7 @@
 (* open Cmdliner *)
-module P = Reconstruction.Parse
-module T = Reconstruction.Translate
-module Smt2lp = Reconstruction.Trans_smt2
+module P = A2lp.Parse
+module T = A2lp.Translate
+module Smt2lp = A2lp.Trans_smt2
 module S = Smtlib_utils.V_2_6
 
 let fpf = Format.fprintf

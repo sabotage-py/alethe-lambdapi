@@ -1,6 +1,6 @@
 (lang dune 3.7)
 
-(name reconstruction)
+(name a2lp)
 
 (generate_opam_files true)
 
@@ -16,7 +16,7 @@
 (using menhir 2.1)
 
 (package
- (name reconstruction)
+ (name a2lp)
  (synopsis "A short synopsis")
  (description "A longer description")
  (depends ocaml dune menhir base ppx_deriving)
