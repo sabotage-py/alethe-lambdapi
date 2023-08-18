@@ -32,11 +32,11 @@ let rec term_translate = function
       in
       string_of_const c
   | Not t -> "¬ " ^ term_translate t
-  | Or list -> "(" ^ H.join_with " ∨c " (List.map term_translate list) ^ ")"
-  | And list -> "(" ^ H.join_with " ∧c " (List.map term_translate list) ^ ")"
-  | Xor list -> "(" ^ H.join_with " xorc " (List.map term_translate list) ^ ")"
-  | Equal (l, r) -> "(" ^ term_translate l ^ " =c " ^ term_translate r ^ ")"
-  | Implies (l, r) -> "(" ^ term_translate l ^ " ⇒c " ^ term_translate r ^ ")"
+  | Or list -> "(" ^ H.join_with " ∨ " (List.map term_translate list) ^ ")"
+  | And list -> "(" ^ H.join_with " ∧ " (List.map term_translate list) ^ ")"
+  | Xor list -> "(" ^ H.join_with " xor " (List.map term_translate list) ^ ")"
+  | Equal (l, r) -> "(" ^ term_translate l ^ " = " ^ term_translate r ^ ")"
+  | Implies (l, r) -> "(" ^ term_translate l ^ " ⇒ " ^ term_translate r ^ ")"
   | _ -> "TODO"
 
 (* let rec term_translate ppf = function
@@ -82,13 +82,12 @@ let rec pp_stmt ppf = function
   | _ -> fprintf ppf "/* TODO */ \n"
 
 let l_prf (x : l_term) = "Prf " ^ x
-let l_prfc (x : l_term) = "Prfc " ^ x
 let l_app (x : l_term) (y : l_term) : l_term = x ^ " (" ^ y ^ ")"
 let ltop = "⊤"
 let lbot = "⊥"
 let lnot = "¬"
-let limpliesc x y = "(" ^ x ^ " ⇒c " ^ y ^ ")"
-let leqc x y = "(" ^ x ^ " =c " ^ y ^ ")"
+let limplies x y = "(" ^ x ^ " ⇒ " ^ y ^ ")"
+let leq x y = "(" ^ x ^ " = " ^ y ^ ")"
 
 let apply_n_times (n : int) (app : l_term) (init0 : l_term) : l_term =
   (*returns app (app (... n times ... app ( init0 )))*)
@@ -102,47 +101,48 @@ let rec not_counter = function
       (1 + p, fi)
   | z -> (0, z)
 
+(*
+   returns the proof of Prf (And (xlist) =c And (ylist)),
+   where ylist has all repetitions removed and
+   by first getting the proofs for implication in both directions *)
 let and_repetition_remover (xlist : term list) (ylist : term list) : lstmt =
-  (*returns the proof of Prfc (And (xlist) =c And (ylist)),
-    where ylist has all repetitions removed and
-    by first getting the proofs for implication in both directions *)
   let len_xlist = List.length xlist in
   let len_ylist = List.length ylist in
   let xt = term_translate (And xlist) in
   let yt = term_translate (And ylist) in
-  (*First, get proof of Prf (xt ⇒c yt)*)
+  (*First, get proof of Prf (xt ⇒ yt)*)
   let indices =
     List.map (function None -> -1 | Some i -> i) (H.get_indices ylist xlist)
   in
   let have_ith_element_of_ylist_from_xlist hyp_name i p =
     Lhave
       ( "a" ^ string_of_int i,
-        l_prfc (term_translate (List.nth ylist i)),
+        l_prf (term_translate (List.nth ylist i)),
         [
-          (let selector = apply_n_times p "∧e2c _ _" hyp_name in
+          (let selector = apply_n_times p "∧e2 _ _" hyp_name in
            if p = len_xlist - 1 then Lrefine [ selector ]
-           else Lrefine [ l_app "∧e1c _ _" selector ]);
+           else Lrefine [ l_app "∧e1 _ _" selector ]);
         ] )
   in
-  (*have ai : Prfc (ith element of ylist) {...};*)
+  (* have ai : Prf (ith element of ylist) {...}; *)
   let have_elements_of_ylist hyp_name =
     List.mapi (have_ith_element_of_ylist_from_xlist hyp_name) indices
   in
   let have_yt =
     List.fold_right
-      (fun p x -> l_app ("∧ic _ _ a" ^ string_of_int p) x)
+      (fun p x -> l_app ("∧i _ _ a" ^ string_of_int p) x)
       (List.init (len_ylist - 1) Fun.id)
       ("a" ^ string_of_int (len_ylist - 1))
   in
   let have_xt_implies_yt =
     Lhave
       ( "h1",
-        l_prf (limpliesc xt yt),
+        l_prf (limplies xt yt),
         [ Lassume [ "g0" ] ]
         @ have_elements_of_ylist "g0"
         @ [ Lrefine [ have_yt ] ] )
   in
-  (*Now, get proof of Prf (yt ⇒c xt)*)
+  (*Now, get proof of Prf (yt ⇒ xt)*)
   let orig_indices =
     List.map
       (function None -> len_ylist | Some i -> i)
@@ -152,11 +152,11 @@ let and_repetition_remover (xlist : term list) (ylist : term list) : lstmt =
   let have_ith_element_of_ylist_from_ylist hyp_name i =
     Lhave
       ( "a" ^ string_of_int i,
-        l_prfc (term_translate (List.nth ylist i)),
+        l_prf (term_translate (List.nth ylist i)),
         [
-          (let selector = apply_n_times i "∧e2c _ _" hyp_name in
+          (let selector = apply_n_times i "∧e2 _ _" hyp_name in
            if i = len_ylist - 1 then Lrefine [ selector ]
-           else Lrefine [ l_app "∧e1c _ _" selector ]);
+           else Lrefine [ l_app "∧e1 _ _" selector ]);
         ] )
   in
   let have_elements_of_ylist_from_ylist hyp_name =
@@ -164,34 +164,31 @@ let and_repetition_remover (xlist : term list) (ylist : term list) : lstmt =
   in
   let have_xt =
     List.fold_right
-      (fun p x -> l_app ("∧ic _ _ a" ^ string_of_int p) x)
+      (fun p x -> l_app ("∧i _ _ a" ^ string_of_int p) x)
       (H.elim_last orig_indices)
       ("a" ^ string_of_int (List.hd (List.rev orig_indices)))
   in
   let have_yt_implies_xt =
     Lhave
       ( "h2",
-        l_prf (limpliesc yt xt),
+        l_prf (limplies yt xt),
         [ Lassume [ "k0" ] ]
         @ have_elements_of_ylist_from_ylist "k0"
         @ [
             Lhave
               ( "a" ^ string_of_int len_ylist,
-                l_prfc ltop,
-                [ Lrefine [ "intuition _"; "true" ] ] );
+                l_prf ltop,
+                [ Lrefine [ "true" ] ] );
             Lrefine [ have_xt ];
           ] )
   in
   (*Final step*)
   Lprfstmt
-    ( l_prfc (leqc xt yt),
+    ( l_prf (leq xt yt),
       [
-        Lassume [ "nh" ];
-        Lrefine [ "nh _" ];
         have_xt_implies_yt;
         have_yt_implies_xt;
-        Lassume [ "s1"; "left1" ];
-        Lapply [ "left1"; "h1"; "h2" ];
+        Lrefine [ "prop_ext1 _ _"; "(∧i _ _ h1 h2)" ];
       ] )
 
 let rule_and_simplify x y =
@@ -233,42 +230,37 @@ let rule_and_simplify x y =
               (*check if ⊥ is in xlist*)
               | Some (p, f, i) ->
                   Lprfstmt
-                    ( l_prfc (leqc t lbot),
+                    ( l_prf (leq t lbot),
                       [
-                        Lassume [ "nh" ];
-                        Lrefine [ "nh _" ];
                         Lhave
                           ( "h1",
-                            l_prf (limpliesc t lbot),
+                            l_prf (limplies t lbot),
                             [
-                              Lassume [ "h3" ];
+                              Lassume ["h3"];
                               Lhave
                                 ( "f1",
-                                  l_prfc
+                                  l_prf
                                     (apply_n_times p lnot (term_translate f)),
                                   [
                                     (let selector =
-                                       apply_n_times i "∧e2c _ _" "h3"
+                                       apply_n_times i "∧e2 _ _" "h3"
                                      in
                                      if i = len_xlist - 1 then
                                        Lrefine [ selector ]
-                                     else Lrefine [ l_app "∧e1c _ _" selector ]);
+                                     else Lrefine [ l_app "∧e1 _ _" selector ]);
                                   ] );
                               Lrefine
-                                [ apply_n_times (p / 2) "double_neg _" "f1" ];
+                                [ apply_n_times (p / 2) "classic _" "f1" ];
                             ] );
                         Lhave
                           ( "h2",
-                            l_prf (limpliesc lbot t),
+                            l_prf (limplies lbot t),
                             [
-                              Lassume [ "nnf" ];
-                              Lapply [ "⊥e" ];
-                              Lapply [ "nnf" ];
                               Lassume [ "pf" ];
-                              Lrefine [ "pf" ];
+                              Lapply [ "⊥e" ];
+                              Lapply [ "pf" ];
                             ] );
-                        Lassume [ "s1"; "left1" ];
-                        Lapply [ "left1"; "h1"; "h2" ];
+                        Lrefine [ "prop_ext1 _ _"; "(∧i _ _ h1 h2)" ];
                       ] )
               | None ->
                   (*⊥ is not in xlist; we must have two contradicting formulae*)
@@ -282,25 +274,25 @@ let rule_and_simplify x y =
                   (*f2 has more 'not's than f1*)
                   let f1i = H.find_idx f1 xlist in
                   let f2i = H.find_idx f2 xlist in
-                  let f1_header = apply_n_times f1i "∧e2c _ _" "h3" in
-                  let f2_header = apply_n_times f2i "∧e2c _ _" "h3" in
+                  let f1_header = apply_n_times f1i "∧e2 _ _" "h3" in
+                  let f2_header = apply_n_times f2i "∧e2 _ _" "h3" in
                   (* let len_xlist = List.length xlist in *)
                   let have_f1 =
                     Lhave
                       ( "f1",
-                        l_prfc (term_translate f1),
+                        l_prf (term_translate f1),
                         [
                           (if f1i = len_xlist - 1 then Lrefine [ f1_header ]
-                           else Lrefine [ l_app "∧e1c _ _" f1_header ]);
+                           else Lrefine [ l_app "∧e1 _ _" f1_header ]);
                         ] )
                   in
                   let have_f2 =
                     Lhave
                       ( "f2",
-                        l_prfc (term_translate f2),
+                        l_prf (term_translate f2),
                         [
                           (if f2i = len_xlist - 1 then Lrefine [ f2_header ]
-                           else Lrefine [ l_app "∧e1c _ _" f2_header ]);
+                           else Lrefine [ l_app "∧e1 _ _" f2_header ]);
                         ] )
                   in
                   let aux_foo str n =
@@ -308,41 +300,34 @@ let rule_and_simplify x y =
                     str
                     @ [ Lassume [ "f2_" ^ sn ]; Lrefine [ "f2_" ^ sn; "_" ] ]
                   in
+                  (* final steps for obtaining contradiction (⊥) *)
                   let h1_footer =
-                    (*final steps for obtaining contradiction (⊥)*)
                     List.fold_left aux_foo [ Lrefine [ "f2 _" ] ]
                       (List.init ((i2 - i1) / 2) (fun r -> r + 1))
                     @ [ Lrefine [ "f1" ] ]
                   in
                   (*finishing the proof*)
                   Lprfstmt
-                    ( l_prfc (leqc t lbot),
+                    ( l_prf (leq t lbot),
                       [
-                        Lassume [ "nh" ];
-                        Lrefine [ "nh"; "_" ];
                         Lhave
                           ( "h1",
-                            l_prf (limpliesc t lbot),
+                            l_prf (limplies t lbot),
                             [
-                              Lassume [ "h3"; "nf" ];
-                              Lrefine [ "h3"; "_" ];
-                              Lassume [ "h4" ];
+                              Lassume [ "h3" ];
                               have_f1;
                               have_f2;
                             ]
                             @ h1_footer );
                         Lhave
                           ( "h2",
-                            l_prf (limpliesc lbot t),
+                            l_prf (limplies lbot t),
                             [
-                              Lassume [ "nnf" ];
+                              Lassume [ "h4" ];
                               Lapply [ "⊥e" ];
-                              Lapply [ "nnf" ];
-                              Lassume [ "pf" ];
-                              Lrefine [ "pf" ];
+                              Lapply [ "h4" ];
                             ] );
-                        Lassume [ "s1"; "left1" ];
-                        Lapply [ "left1"; "h1"; "h2" ];
+                        Lrefine [ "prop_ext1 _ _"; "(∧i _ _ h1 h2)" ];
                       ] )
             in
             proof_of_contradiction
@@ -355,25 +340,22 @@ let rule_and_simplify x y =
               raise (SemanticError ("Can't equate the LHS to " ^ ltop))
             else
               Lprfstmt
-                ( l_prfc (leqc t ltop),
+                ( l_prf (leq t ltop),
                   [
-                    Lassume [ "nh" ];
-                    Lrefine [ "nh _" ];
                     Lhave
                       ( "h1",
-                        l_prf (limpliesc t ltop),
-                        [ Lassume [ "h3"; "nt" ]; Lrefine [ "∧e1c _ _ h3 nt" ] ]
+                        l_prf (limplies t ltop),
+                        [ Lassume [ "h3"; "nt" ]; Lrefine [ "∧e1 _ _ h3 nt" ] ]
                       );
                     Lhave
                       ( "h2",
-                        l_prf (limpliesc ltop t),
+                        l_prf (limplies ltop t),
                         [
                           Lassume [ "pt" ];
                           Lrefine
-                            [ apply_n_times (len_xlist - 1) "∧ic _ _ pt" "pt" ];
+                            [ apply_n_times (len_xlist - 1) "∧i _ _ pt" "pt" ];
                         ] );
-                    Lassume [ "s1"; "left1" ];
-                    Lapply [ "left1"; "h1"; "h2" ];
+                    Lrefine [ "prop_ext1 _ _"; "(∧i _ _ h1 h2)" ];
                   ] )
         | _ ->
             raise (SyntaxError "RHS of the equality is of an unexpected type")
@@ -383,7 +365,7 @@ let rule_and_simplify x y =
 
 let predefined_proof_generator (ast_term : term) (ref : l_term list) : lstmt =
   (*uses predefined lambdapi proofs directly*)
-  Lprfstmt (l_prfc @@ term_translate @@ ast_term, [ Lrefine ref ])
+  Lprfstmt (l_prf @@ term_translate @@ ast_term, [ Lrefine ref ])
 
 let step_translate cl rule premises =
   match rule with
@@ -420,7 +402,7 @@ let step_translate cl rule premises =
         match cl with
         | [ Not (Not (Not x)); y ] ->
             if x = y then predefined_proof_generator (Or cl) [ rule; "_ _" ]
-              (* l_proof_statement (l_prfc @@ term_translate @@ (Or cl)) [l_refine ["not_not _ _"]]  *)
+              (* l_proof_statement (l_prf @@ term_translate @@ (Or cl)) [l_refine ["not_not _ _"]]  *)
             else raise (SyntaxError "clause is not of the required form")
         | _ -> raise (SyntaxError "clause is not of the required form")
       in
@@ -430,8 +412,8 @@ let step_translate cl rule premises =
         match cl with
         | [ Equal (x, y) ] ->
             if x = y then
-              predefined_proof_generator (Equal (x, y)) [ rule; "_" ]
-              (* l_proof_statement (l_prfc @@ term_translate @@ Equal (x, y)) [l_refine ["eq_reflexive _"]] *)
+              predefined_proof_generator (Equal (x, y)) [ rule; term_translate x ]
+              (* l_proof_statement (l_prf @@ term_translate @@ Equal (x, y)) [l_refine ["eq_reflexive _"]] *)
             else raise (SyntaxError "")
         | _ -> raise (SyntaxError "")
       in
@@ -490,7 +472,7 @@ let step_translate cl rule premises =
   | _ -> Ltodo "/* TODO */"
 
 let get_lp_stmt = function
-  | Assume x -> Ldecl (x.name, l_prfc (term_translate x.term)) (* ≔ *)
+  | Assume x -> Ldecl (x.name, l_prf (term_translate x.term)) (* ≔ *)
   | Step x ->
       let proof_def =
         match step_translate x.clause x.rule x.annotations with

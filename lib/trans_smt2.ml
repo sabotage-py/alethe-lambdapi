@@ -27,7 +27,7 @@ let smt2lp_stmt out (st : statement) =
   | Stmt_assert _ -> fpf out ""
   | Stmt_decl d ->
       if d.fun_ty_vars = [] then
-        fpf out "symbol %s : %a ; \n" d.fun_name pp_ty d.fun_ret
+        fpf out "symbol %s : Term %a ; \n" d.fun_name pp_ty d.fun_ret
       else raise (UnderConstruction "I don't know what to do in this case")
   | Stmt_fun_def fr ->
       fpf out "(@[<2>define-fun@ %a@])" (pp_par pp_fr)

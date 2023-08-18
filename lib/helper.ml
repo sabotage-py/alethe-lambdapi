@@ -7,17 +7,24 @@ let join_with s list =
   in
   aux "" list
 
-(* returns the index of el in list *)
+(*
+   returns the index of a given element (el) in list.
+   raises error if the element is not in the list. *)
 let rec find_idx el = function
   | [] -> raise Not_found
   | x :: t -> if x = el then 0 else 1 + find_idx el t
 
+(*
+   'option' variant of find_idx.
+   returns None (instead of raising an error) if the element is not in the list. *)
 let rec find_idx_opt el = function
   | [] -> None
   | x :: t -> (
       if x = el then Some 0
       else match find_idx_opt el t with None -> None | Some i -> Some (1 + i))
 
+(*
+   returns the list containing the unique elements of a given list. tail recursive. *)
 let unique_list list =
   let rec aux keeper = function
     | [] -> keeper
@@ -28,19 +35,24 @@ let unique_list list =
   in
   List.rev (aux [] list)
 
-let elim_last list =
+(*
+   removes the last element from a list. tail recursive. *)
+let elim_last (list : 'a list) : 'a list =
   let rec aux keeper = function
     | [] | [ _ ] -> keeper
     | x :: t -> aux (x :: keeper) t
   in
   List.rev (aux [] list)
 
-let rec rem_el el = function
+(*
+   removes a specific (given) element from a list *)
+let rec rem_el (el : 'a) : 'a list -> 'a list = function
   | [] -> []
   | x :: t -> if x = el then t else x :: rem_el el t
 
+(*
+   returns the list of indices in blist of the elements of alist *)
 let rec get_indices (alist : 'a list) (blist : 'a list) : int option list =
-  (*returns the list of indices in blist of the elements of alist*)
   match alist with
   | x :: t -> find_idx_opt x blist :: get_indices t blist
   | [] -> []
