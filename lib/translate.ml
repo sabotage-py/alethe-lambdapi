@@ -176,9 +176,7 @@ let and_repetition_remover (xlist : term list) (ylist : term list) : lstmt =
         @ have_elements_of_ylist_from_ylist "k0"
         @ [
             Lhave
-              ( "a" ^ string_of_int len_ylist,
-                l_prf ltop,
-                [ Lrefine [ "true" ] ] );
+              ("a" ^ string_of_int len_ylist, l_prf ltop, [ Lrefine [ "true" ] ]);
             Lrefine [ have_xt ];
           ] )
   in
@@ -236,7 +234,7 @@ let rule_and_simplify x y =
                           ( "h1",
                             l_prf (limplies t lbot),
                             [
-                              Lassume ["h3"];
+                              Lassume [ "h3" ];
                               Lhave
                                 ( "f1",
                                   l_prf
@@ -249,16 +247,13 @@ let rule_and_simplify x y =
                                        Lrefine [ selector ]
                                      else Lrefine [ l_app "∧e1 _ _" selector ]);
                                   ] );
-                              Lrefine
-                                [ apply_n_times (p / 2) "classic _" "f1" ];
+                              Lrefine [ apply_n_times (p / 2) "classic _" "f1" ];
                             ] );
                         Lhave
                           ( "h2",
                             l_prf (limplies lbot t),
                             [
-                              Lassume [ "pf" ];
-                              Lapply [ "⊥e" ];
-                              Lapply [ "pf" ];
+                              Lassume [ "pf" ]; Lapply [ "⊥e" ]; Lapply [ "pf" ];
                             ] );
                         Lrefine [ "prop_ext1 _ _"; "(∧i _ _ h1 h2)" ];
                       ] )
@@ -313,19 +308,13 @@ let rule_and_simplify x y =
                         Lhave
                           ( "h1",
                             l_prf (limplies t lbot),
-                            [
-                              Lassume [ "h3" ];
-                              have_f1;
-                              have_f2;
-                            ]
-                            @ h1_footer );
+                            [ Lassume [ "h3" ]; have_f1; have_f2 ] @ h1_footer
+                          );
                         Lhave
                           ( "h2",
                             l_prf (limplies lbot t),
                             [
-                              Lassume [ "h4" ];
-                              Lapply [ "⊥e" ];
-                              Lapply [ "h4" ];
+                              Lassume [ "h4" ]; Lapply [ "⊥e" ]; Lapply [ "h4" ];
                             ] );
                         Lrefine [ "prop_ext1 _ _"; "(∧i _ _ h1 h2)" ];
                       ] )
@@ -412,7 +401,9 @@ let step_translate cl rule premises =
         match cl with
         | [ Equal (x, y) ] ->
             if x = y then
-              predefined_proof_generator (Equal (x, y)) [ rule; term_translate x ]
+              predefined_proof_generator
+                (Equal (x, y))
+                [ rule; term_translate x ]
               (* l_proof_statement (l_prf @@ term_translate @@ Equal (x, y)) [l_refine ["eq_reflexive _"]] *)
             else raise (SyntaxError "")
         | _ -> raise (SyntaxError "")
